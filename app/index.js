@@ -2,8 +2,10 @@ const log = require("../helpers/log");
 const { grabCards } = require("./cardList");
 const { getSpyCard } = require("./getSpyCard");
 const formatAllUsers = require("../helpers/formatAllUsers");
+const GameManager = require("../game/GameManager");
 
 module.exports = io => {
+  const gameManager = new GameManager();
   let state = "setup";
   let gameCards = [];
   let lockCards = false;
@@ -13,8 +15,6 @@ module.exports = io => {
   let allUsers = [];
   let blueOverwatch = {};
   let redOverwatch = {};
-  let ping = null;
-  let pong = null;
 
   return socket => {
     log("socket Connection");
@@ -32,67 +32,36 @@ module.exports = io => {
         ? 1
         : 0;
 
-    const getGameInfo = username => {
-      return {
-        state,
-        gameCards,
-        spyCard: isOverwatch(username) ? spyCard : [],
-        clickedCard,
-        allUsers,
-        lockCards,
-        lockSpyCard,
-        totalOverwatch: getTotalOverWatch()
-      };
-    };
-    const sendAllGameInfo = () => {
-      allUsers.forEach(user => {
-        io.to(`${user.socketId}`).emit("gameinfo", getGameInfo(user.username));
+    const sendAllGameInfo = spyGame => {
+      spyGame.allUsers.forEach(user => {
+        io.to(`${user.socketId}`).emit(
+          "gameinfo",
+          spyGame.getGameInfo(user.socketId)
+        );
       });
     };
 
-    // ========================PINGPONG========================= //
-    socket.on("clientping", () => socket.emit("serverpong"));
-    socket.on("clientpong", () => {
-      log("Ponged by ${socket.id}");
-      pong = socket.id;
-    });
-    const testPing = socketId => {
-      ping = socketId;
-      io.to(socketId).emit("serverping");
-      return new Promise(res => setTimeout(() => res(ping === pong), 3000));
-    };
-
-    // ========================LOGIN=========================== //
-    let pinging = false;
-    const logging = async (username, socket) => {
-      if (pinging) return;
-      pinging = true;
-      if (!username.trim().length) return;
-      const index = allUsers.findIndex(soc => soc.username === username);
-      if (index !== -1) {
-        const socketId = allUsers[index].socketId;
-        const inUse = await testPing(socketId);
-        log(socketId, inUse);
-        if (inUse) {
-          log(`Username ${username} already in use!`);
-          socket.emit("logagain", false);
-          ping = null;
-          pong = null;
-          return (pinging = false);
-        } else {
-          allUsers = allUsers.map(soc =>
-            soc.username === username ? { username, socketId: socket.id } : soc
-          );
-        }
-      } else allUsers.push({ username, socketId: socket.id });
+    // =====================CREATING ROOM======================== //
+    socket.on("newroom", username => {
+      const [ID, spyGame] = gameManager.createGame(username, socket.id);
       log("Logging in");
       socket.emit("loggedin", username);
-      socket.broadcast.emit("newuser", formatAllUsers(allUsers));
-      sendAllGameInfo();
-      pinging = false;
-    };
-    socket.on("login", username => logging(username, socket));
-    socket.on("re-login", username => logging(username, socket));
+      sendAllGameInfo(spyGame);
+    });
+
+    // =====================JOINING ROOM======================== //
+    socket.on("joinroom", ({ username, roomID }) => {
+      const [ID, spyGame] = gameManager.joinGame(username, socket.id, roomID);
+      if (spyGame) {
+        log("Logging in");
+        socket.emit("loggedin", username);
+        sendAllGameInfo(spyGame);
+      } else
+        socket.emit(
+          "logagain",
+          "The room you're trying to join doesn't exist!"
+        );
+    });
 
     // =========================OVERWATCH========================== //
 
