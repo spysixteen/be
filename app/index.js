@@ -1,7 +1,5 @@
 const log = require("../helpers/log");
-const { grabCards } = require("./cardList");
-const { getSpyCard } = require("./getSpyCard");
-const formatAllUsers = require("../helpers/formatAllUsers");
+const { getSpyCard } = require("../helpers/getSpyCard");
 const GameManager = require("../game/GameManager");
 
 module.exports = io => {
@@ -105,25 +103,23 @@ module.exports = io => {
 
     // =========================CARDS========================== //
 
-    socket.on("getcards", () => {
-      if (!lockCards && state === "setup") {
-        log("They're askin' for cards!");
-        gameCards = grabCards().map((val, id) => ({
-          id,
-          text: val,
-          spy: 0,
-          checked: false,
-          revealed: false
-        }));
-      }
+    socket.on("getcards", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
+
+      spyGame.shuffleCards();
       sendAllGameInfo();
     });
 
-    socket.on("confirmcards", () => {
-      if (!lockCards && state === "setup") {
-        log("Cards confirmed");
-        lockCards = true;
-      }
+    socket.on("confirmcards", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
+
+      spyGame.lockCards();
       sendAllGameInfo();
     });
 

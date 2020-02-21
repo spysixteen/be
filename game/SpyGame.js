@@ -1,11 +1,14 @@
+const { grabCards } = require("../helpers/cardList");
+const { getSpyCard } = require("../helpers/getSpyCard");
+
 module.exports = class SpyGame {
   constructor() {
     this.state = "setup";
 
-    this.gameCards = [];
+    this.gameCards = grabCards(); // Array of 25 cards
     this.lockCards = false;
 
-    this.spyCard = []; // Array of values, 0/1/2/3
+    this.spyCard = getSpyCard(); // Array of values, 0/1/2/3
     this.lockSpyCard = false;
 
     this.clickedCard = null;
@@ -103,5 +106,13 @@ module.exports = class SpyGame {
     if (this.blueOverwatch === socketId) this.blueOverwatch = null;
     if (this.redOverwatch === socketId) this.redOverwatch = null;
     return 0;
+  };
+
+  shuffleCards = () => {
+    if (!lockCards && state === "setup") this.gameCards = grabCards();
+  };
+
+  lockCards = () => {
+    if (state === "setup") this.lockCards = true;
   };
 };
