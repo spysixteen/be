@@ -42,7 +42,7 @@ module.exports = io => {
     };
 
     // =====================CREATING ROOM======================== //
-    socket.on("newroom", username => {
+    socket.on("newroom", ({ username }) => {
       const [ID, spyGame] = gameManager.createGame(username, socket.id);
       log("Logging in");
       socket.emit("loggedin", username);
@@ -65,55 +65,41 @@ module.exports = io => {
 
     // =========================OVERWATCH========================== //
 
-    socket.on("selectoverwatch", ({ username, isBlue }) => {
-      if (state !== "setup") return;
-      if (
-        (isBlue && blueOverwatch.socketId) ||
-        (!isBlue && redOverwatch.socketId)
-      ) {
+    socket.on("selectoverwatch", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
+
+      // Get our overwatchID
+      const overwatchID = spyGame.becomeOverwatch(socket.id);
+      if (overwatchID === -1) {
+        return socket.emit("logagain", "You are not a player in this game!");
+      }
+      if (overwatchID === 0) {
         log("overwatch already assigned");
-        log(blueOverwatch, redOverwatch);
+        log(spyGame.blueOverwatch, spyGame.redOverwatch);
         return socket.emit(
           "overwatchassigned",
-          `${isBlue ? "Blue" : "Red"} Overwatch is already assigned`
+          `Overwatch is already assigned`
         );
       }
-      const user = allUsers.find(
-        soc => soc.username === username && soc.socketId === socket.id
-      );
-      if (!user) return socket.emit("logagain", false);
-      if (
-        blueOverwatch.username === username ||
-        redOverwatch.username === username
-      )
-        return socket.emit(
-          "overwatchassigned",
-          "You are already assigned to an overwatch"
-        );
       log("We overwatchin' now");
-      if (isBlue) blueOverwatch = user;
-      else redOverwatch = user;
-      log(blueOverwatch, redOverwatch);
-      socket.emit("assignedoverwatch", {
-        username,
-        overwatch: isBlue ? "blue" : "red"
-      });
-      socket.broadcast.emit(
-        "newoverwatch",
-        `New ${isBlue ? "blue" : "red"} overwatch: ${username}`
-      );
+      log(spyGame.blueOverwatch, spyGame.redOverwatch);
+      socket.emit("assignedoverwatch", spyGame.findUser(socket.id));
       sendAllGameInfo();
     });
 
-    socket.on("nooverwatch", user => {
-      if (state !== "setup") return;
-      if (blueOverwatch.socketId === socket.id) blueOverwatch = {};
-      if (redOverwatch.socketId === socket.id) redOverwatch = {};
-      socket.emit("assignedoverwatch", {
-        username: user.username,
-        overwatch: false
-      });
-      socket.emit("securespycard");
+    socket.on("nooverwatch", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
+
+      const error = spyGame.removeOverwatch(socket.id);
+      if (error) {
+        return socket.emit("logagain", "You are not a player in this game!");
+      }
       sendAllGameInfo();
     });
 
