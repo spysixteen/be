@@ -176,7 +176,8 @@ module.exports = io => {
 
     socket.on("disconnect", () => {
       log(`Goodbye ${socket.id} :wave:`);
-      const allUsers = spyGame.removeUser(socketId);
+      const spyGame = gameManager.findGameWithSocketId(socket.id)
+      if (spyGame) spyGame.removeUser(socket.id)
     });
   };
 };

@@ -1,5 +1,5 @@
 const RandomNumberGenny = require("../helpers/RandomNumberGenny");
-const SpyGame = require("./SpyGame")
+const SpyGame = require("./SpyGame");
 
 module.exports = class GameManager {
   constructor() {
@@ -19,6 +19,15 @@ module.exports = class GameManager {
   };
 
   findGame = ID => [ID, this.gameList[ID]];
+
+  findGameWithSocketId = socketId => {
+    // Iterate over all of our games to see if our socketId
+    //     exists in there.
+    // THIS CAN BE SLOW, SO USE SPARINGLY.
+    return Object.values(this.gameList).find(spyGame =>
+      spyGame.findUser(socketId)
+    );
+  };
 
   joinGame = (username, socketId, ID) => {
     const game = this.gameList[ID];

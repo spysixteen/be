@@ -77,7 +77,7 @@ module.exports = class SpyGame {
     state: this.state,
     endGameVictor: this.endGameVictor,
     gameCards: this.gameCards,
-    isOverwatch = this.isOverwatch(socketId),
+    isOverwatch: this.isOverwatch(socketId),
     spyCard: this.isOverwatch(socketId) ? this.spyCard : [],
     clickedCard: this.clickedCard,
     allUsers: this.allUsers,
