@@ -23,7 +23,7 @@ module.exports = class SpyGame {
   user: {
     username: string;
     socketId: string;
-    overwatch: 0|1|2
+    overwatch: 0|1|2 ←←← REMOVE THIS?
   }
   card: {
     id: number;
@@ -35,6 +35,8 @@ module.exports = class SpyGame {
 
   =========================================================
   */
+
+  findUser = socketId => this.allUsers.find(user => user.socketId === socketId);
 
   addUser = (username, socketId) => {
     // If it doesn't already exist in our array, add it in!
@@ -56,7 +58,7 @@ module.exports = class SpyGame {
       : 0;
 
   getGameInfo = socketId => ({
-    state = this.state,
+    state: this.state,
     gameCards: this.gameCards,
     spyCard: this.isOverwatch(socketId) ? this.spyCard : [],
     clickedCard: this.clickedCard,
@@ -65,4 +67,41 @@ module.exports = class SpyGame {
     lockSpyCard: this.lockSpyCard,
     totalOverwatch: this.getTotalOverWatch()
   });
+
+  becomeOverwatch = socketId => {
+    const user = this.findUser(socketId);
+
+    // No user? Return -1
+    if (!user) return -1;
+
+    // Already set up as an overwatch? return
+    if (user.overwatch) return user.overwatch;
+
+    // Find an open spot if there is one,
+    //     and assign it.
+    if (!this.blueOverwatch) {
+      this.blueOverwatch = socketId;
+      user.overwatch = 1;
+    }
+    if (!this.redOverwatch) {
+      this.redOverwatch = socketId;
+      user.overwatch = 2;
+    }
+
+    // If we were assigned, this number will no longer be a zero.
+    //     If overwatch is already taken, user.overwatch is zero.
+    return user.overwatch;
+  };
+
+  removeOverwatch = socketId => {
+    const user = this.findUser(socketId);
+
+    // No user? Return 1 for "Yes, we have an error"
+    if (!user) return 1;
+
+    user.overwatch = 0;
+    if (this.blueOverwatch === socketId) this.blueOverwatch = null;
+    if (this.redOverwatch === socketId) this.redOverwatch = null;
+    return 0;
+  };
 };
