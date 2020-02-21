@@ -12,7 +12,7 @@ module.exports = class GameManager {
   // Right now, we're assuming one room.  ↓↓
   createGame = (username, socketId, gameType) => {
     const ID = this.RNG.generate();
-    const game = new SpyGame();
+    const game = new SpyGame(this, ID);
     game.addUser(username, socketId);
     this.gameList[ID] = game;
     return [ID, this.gameList[ID]];
