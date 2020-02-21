@@ -11,10 +11,11 @@ exports.getSpyCard = () => {
   const blue = new Array(8).fill(0).map(randomUniqueNumber(25, usedIndicies));
   const red = new Array(9).fill(0).map(randomUniqueNumber(25, usedIndicies));
 
-  return new Array(25).fill(0).map((val, i) => {
-    if (blue.includes(i)) return 1;
-    if (red.includes(i)) return 2;
-    if (i === assassin) return 3;
-    else return 0;
+  return new Array(25).fill(0).map((val, id) => {
+    let tile = 0
+    if (blue.includes(i)) tile = 1;
+    if (red.includes(i)) tile = 2;
+    if (i === assassin) tile = 3;
+    return {id, tile}
   });
 };
