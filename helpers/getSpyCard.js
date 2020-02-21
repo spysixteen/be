@@ -13,9 +13,9 @@ exports.getSpyCard = () => {
 
   return new Array(25).fill(0).map((val, id) => {
     let tile = 0
-    if (blue.includes(i)) tile = 1;
-    if (red.includes(i)) tile = 2;
-    if (i === assassin) tile = 3;
+    if (blue.includes(id)) tile = 1;
+    if (red.includes(id)) tile = 2;
+    if (id === assassin) tile = 3;
     return {id, tile}
   });
 };
