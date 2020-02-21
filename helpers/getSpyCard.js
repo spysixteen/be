@@ -1,4 +1,4 @@
-const randomUniqueNumber = require("../helpers/randomUniqueNumber");
+const randomUniqueNumber = require("./randomUniqueNumber");
 
 const randomInt = range => Math.floor(Math.random() * range);
 

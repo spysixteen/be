@@ -1,4 +1,4 @@
-const randomUniqueNumber = require("../helpers/randomUniqueNumber");
+const randomUniqueNumber = require("./randomUniqueNumber");
 
 const cardArray = [
   "chick",
