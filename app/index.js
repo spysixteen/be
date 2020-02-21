@@ -21,15 +21,6 @@ module.exports = io => {
     const isOverwatch = username =>
       blueOverwatch.username === username || redOverwatch.username === username;
 
-    const getTotalOverWatch = () =>
-      blueOverwatch.socketId
-        ? redOverwatch.socketId
-          ? 2
-          : 1
-        : redOverwatch.socketId
-        ? 1
-        : 0;
-
     const sendAllGameInfo = spyGame => {
       spyGame.allUsers.forEach(user => {
         io.to(`${user.socketId}`).emit(
@@ -125,70 +116,62 @@ module.exports = io => {
 
     // =========================SPYCARDS========================== //
 
-    const canChangeSpyCard = username =>
-      state === "setup" && !lockSpyCard && isOverwatch(username);
+    socket.on("getspycard", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
 
-    socket.on("getspycard", username => {
-      if (canChangeSpyCard(username)) {
-        log("Spy cards, gettin' ready!");
-        spyCard = getSpyCard().map((tile, id) => ({ id, tile }));
-      }
+      spyGame.shuffleSpyCard();
       sendAllGameInfo();
     });
 
     socket.on("confirmspycard", username => {
-      if (canChangeSpyCard(username) && spyCard.find(val => val.tile === 3)) {
-        log("We're setting the spy card");
-        lockSpyCard = true;
-      }
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
+
+      spyGame.lockSpyCard();
       sendAllGameInfo();
     });
 
-    // ===================STARTINGGAME============================ //
+    // ===================STARTING GAME============================ //
 
-    socket.on("startgame", () => {
-      if (state === "setup") {
-        const missing = [];
-        if (!gameCards.length) missing.push("gameCards");
-        if (!spyCard.length) missing.push("spyCard");
-        if (!redOverwatch) missing.push("redOverwatch");
-        if (!blueOverwatch) missing.push("blueOverwatch!");
+    socket.on("startgame", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
 
-        if (missing.length) io.emit("gamefail", { missing });
-        else {
-          log("Starting the game");
-          state = "gaming";
-        }
-      }
+      // Start the game.
+      // If we're missing something, tell the user
+      const missing = spyGame.startGame();
+      if (missing) return socket.emit("gamefail", { missing });
+
+      log("Starting the game");
       sendAllGameInfo();
     });
 
     // =======================IN THE GAME======================= //
-    socket.on("clickcard", ({ username, _clickedCard }) => {
+    socket.on("clickcard", ({ roomID, clickedCard }) => {
       log(_clickedCard);
-      if (
-        state === "gaming" &&
-        !isOverwatch(username) &&
-        !_clickedCard.revealed
-      ) {
-        log(`Clicked card with id ${_clickedCard.id}`);
-        clickedCard = _clickedCard;
-        gameCards = gameCards.map(card =>
-          card.id === _clickedCard.id
-            ? { ...card, checked: true }
-            : { ...card, checked: false }
-        );
-      }
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
+
+      spyGame.clickCard(socket.id, clickedCard);
       sendAllGameInfo();
     });
 
-    socket.on("revealcard", username => {
-      if (isOverwatch(username) && state === "gaming" && clickedCard) {
-        log("revealing card with id " + clickedCard.id);
-        gameCards[clickedCard.id].spy = spyCard[clickedCard.id].tile;
-        gameCards[clickedCard.id].checked = false;
-        gameCards[clickedCard.id].revealed = true;
-      }
+    socket.on("revealcard", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame || spyGame.state !== "setup") return;
+
+      spyGame(socket.id);
       sendAllGameInfo();
     });
 

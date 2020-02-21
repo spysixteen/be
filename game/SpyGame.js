@@ -71,7 +71,16 @@ module.exports = class SpyGame {
     totalOverwatch: this.getTotalOverWatch()
   });
 
+  /* 
+  ===========================================
+  ==                                       ==
+  ==               SETUP PHASE             ==
+  ==                                       ==
+  ===========================================
+  */
+
   becomeOverwatch = socketId => {
+    if (state !== "setup") return;
     const user = this.findUser(socketId);
 
     // No user? Return -1
@@ -97,6 +106,7 @@ module.exports = class SpyGame {
   };
 
   removeOverwatch = socketId => {
+    if (state !== "setup") return;
     const user = this.findUser(socketId);
 
     // No user? Return 1 for "Yes, we have an error"
@@ -114,5 +124,74 @@ module.exports = class SpyGame {
 
   lockCards = () => {
     if (state === "setup") this.lockCards = true;
+  };
+
+  unlockCards = () => {
+    if (state === "setup") this.lockCards = false;
+  };
+
+  shuffleSpyCard = socketId => {
+    if (state === "setup" && this.isOverWatch(socketId))
+      this.spyCard = getSpyCard();
+  };
+
+  lockSpyCard = socketId => {
+    if (state === "setup" && this.isOverWatch(socketId))
+      this.lockSpyCard = true;
+  };
+
+  unlockSpyCard = socketId => {
+    if (state === "setup" && this.isOverWatch(socketId))
+      this.lockSpyCard = false;
+  };
+
+  startGame = () => {
+    const missing = [];
+    if (!this.lockCards) missing.push("gameCards");
+    if (!this.lockSpyCard) missing.push("spyCard");
+    if (!this.redOverwatch && !this.blueOverwatch) missing.push("overwatch");
+
+    if (missing.length) return missing;
+    else this.state = "gaming";
+  };
+
+  /* 
+  ===========================================
+  ==                                       ==
+  ==              GAMIN' PHASE             ==
+  ==                                       ==
+  ===========================================
+  */
+
+  clickCard = (socketId, clickedCard) => {
+    // If we're not gaming,
+    //     we ARE overwatch,
+    //     or the card is already revealed -> return.
+    if (
+      state !== "gaming" ||
+      this.isOverWatch(socketId) ||
+      this.clickedCard.revealed
+    )
+      return;
+
+    this.gameCards = this.gameCards.map(card =>
+      card.id === clickedCard.id
+        ? { ...card, clicked: true }
+        : { ...card, clicked: false }
+    );
+    this.clickedCard = clickedCard;
+  };
+
+  revealCard = socketId => {
+    // If we're not gaming,
+    //     we AREN'T overwatch,
+    //     or there isn't a clicked card -> return.
+    if (state !== "gaming" || this.isOverWatch(socketId) || !this.clickedCard)
+      return;
+
+    const card = this.gameCards[this.clickedCard.id];
+    card.spy = this.spyCard[this.clickedCard.id].tile;
+    card.clicked = false;
+    card.revealed = true;
   };
 };
