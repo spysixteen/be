@@ -1,4 +1,5 @@
 const RandomNumberGenny = require("../helpers/RandomNumberGenny");
+const SpyGame = require("./SpyGame")
 
 module.exports = class GameManager {
   constructor() {
