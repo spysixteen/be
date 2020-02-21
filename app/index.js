@@ -1,25 +1,12 @@
 const log = require("../helpers/log");
-const { getSpyCard } = require("../helpers/getSpyCard");
 const GameManager = require("../game/GameManager");
 
 module.exports = io => {
   const gameManager = new GameManager();
-  let state = "setup";
-  let gameCards = [];
-  let lockCards = false;
-  let spyCard = [];
-  let lockSpyCard = false;
-  let clickedCard = null;
-  let allUsers = [];
-  let blueOverwatch = {};
-  let redOverwatch = {};
 
   return socket => {
     log("socket Connection");
     log(socket.id);
-
-    const isOverwatch = username =>
-      blueOverwatch.username === username || redOverwatch.username === username;
 
     const sendAllGameInfo = spyGame => {
       spyGame.allUsers.forEach(user => {
@@ -34,7 +21,7 @@ module.exports = io => {
     socket.on("newroom", ({ username }) => {
       const [ID, spyGame] = gameManager.createGame(username, socket.id);
       log("Logging in");
-      socket.emit("loggedin", username);
+      socket.emit("loggedin", spyGame.findUser(socket.id));
       sendAllGameInfo(spyGame);
     });
 
@@ -159,7 +146,7 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
       spyGame.clickCard(socket.id, clickedCard);
       sendAllGameInfo();
@@ -169,27 +156,19 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
       spyGame(socket.id);
       sendAllGameInfo();
     });
 
-    socket.on("resetall", password => {
-      if (password === "no way dude") {
-        io.to(blueOverwatch.socketId).emit("resetall");
-        io.to(redOverwatch.socketId).emit("resetall");
-        state = "setup";
-        gameCards = [];
-        lockCards = false;
-        spyCard = [];
-        lockSpyCard = false;
-        clickedCard = null;
-        blueOverwatch = {};
-        redOverwatch = {};
-        ping = null;
-        pong = null;
-      }
+    socket.on("resetall", ({ roomID }) => {
+      // Get our game.
+      // If it doesn't exist or is already going, return.
+      const [ID, spyGame] = gameManager.findGame(roomID);
+      if (!spyGame) return;
+
+      spyGame.resetGame();
       sendAllGameInfo();
     });
 
@@ -197,13 +176,7 @@ module.exports = io => {
 
     socket.on("disconnect", () => {
       log(`Goodbye ${socket.id} :wave:`);
-      if (blueOverwatch.socketId === socket.id) blueOverwatch = {};
-      if (redOverwatch.socketId === socket.id) redOverwatch = {};
-      setTimeout(
-        () => (allUsers = allUsers.filter(user => user.socketId !== socket.id)),
-        5000
-      );
-      log(allUsers);
+      const allUsers = spyGame.removeUser(socketId);
     });
   };
 };
