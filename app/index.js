@@ -21,7 +21,10 @@ module.exports = io => {
     socket.on("newroom", ({ username }) => {
       const [ID, spyGame] = gameManager.createGame(username, socket.id);
       log("Logging in");
-      socket.emit("loggedin", spyGame.findUser(socket.id));
+      socket.emit("loggedin", {
+        user: spyGame.findUser(socket.id),
+        roomID: ID
+      });
       sendAllGameInfo(spyGame);
     });
 
@@ -30,7 +33,10 @@ module.exports = io => {
       const [ID, spyGame] = gameManager.joinGame(username, socket.id, roomID);
       if (spyGame) {
         log("Logging in");
-        socket.emit("loggedin", username);
+        socket.emit("loggedin", {
+          user: spyGame.findUser(socket.id),
+          roomID: ID
+        });
         sendAllGameInfo(spyGame);
       } else
         socket.emit(
@@ -63,7 +69,7 @@ module.exports = io => {
       log("We overwatchin' now");
       log(spyGame.blueOverwatch, spyGame.redOverwatch);
       socket.emit("assignedoverwatch", spyGame.findUser(socket.id));
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     socket.on("nooverwatch", ({ roomID }) => {
@@ -76,7 +82,7 @@ module.exports = io => {
       if (error) {
         return socket.emit("logagain", "You are not a player in this game!");
       }
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     // =========================CARDS========================== //
@@ -88,7 +94,7 @@ module.exports = io => {
       if (!spyGame || spyGame.state !== "setup") return;
 
       spyGame.shuffleCards();
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     socket.on("confirmcards", ({ roomID }) => {
@@ -98,7 +104,7 @@ module.exports = io => {
       if (!spyGame || spyGame.state !== "setup") return;
 
       spyGame.lockCards();
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     // =========================SPYCARDS========================== //
@@ -109,18 +115,18 @@ module.exports = io => {
       const [ID, spyGame] = gameManager.findGame(roomID);
       if (!spyGame || spyGame.state !== "setup") return;
 
-      spyGame.shuffleSpyCard();
-      sendAllGameInfo();
+      spyGame.shuffleSpyCard(socket.id);
+      sendAllGameInfo(spyGame);
     });
 
-    socket.on("confirmspycard", username => {
+    socket.on("confirmspycard", ({roomID}) => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
       if (!spyGame || spyGame.state !== "setup") return;
 
-      spyGame.lockSpyCard();
-      sendAllGameInfo();
+      spyGame.lockSpyCard(socket.id);
+      sendAllGameInfo(spyGame);
     });
 
     // ===================STARTING GAME============================ //
@@ -137,7 +143,7 @@ module.exports = io => {
       if (missing) return socket.emit("gamefail", { missing });
 
       log("Starting the game");
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     // =======================IN THE GAME======================= //
@@ -149,7 +155,7 @@ module.exports = io => {
       if (!spyGame) return;
 
       spyGame.clickCard(socket.id, clickedCard);
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     socket.on("revealcard", ({ roomID }) => {
@@ -159,7 +165,7 @@ module.exports = io => {
       if (!spyGame) return;
 
       spyGame(socket.id);
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     socket.on("resetall", ({ roomID }) => {
@@ -169,15 +175,15 @@ module.exports = io => {
       if (!spyGame) return;
 
       spyGame.resetGame();
-      sendAllGameInfo();
+      sendAllGameInfo(spyGame);
     });
 
     // =========================DISCONNECT=========================== //
 
     socket.on("disconnect", () => {
       log(`Goodbye ${socket.id} :wave:`);
-      const spyGame = gameManager.findGameWithSocketId(socket.id)
-      if (spyGame) spyGame.removeUser(socket.id)
+      const spyGame = gameManager.findGameWithSocketId(socket.id);
+      if (spyGame) spyGame.removeUser(socket.id);
     });
   };
 };
