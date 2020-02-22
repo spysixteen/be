@@ -60,7 +60,7 @@ module.exports = class SpyGame {
     this.allUsers.filter(user => user.socketId !== socketId);
     // If allUsers becomes empty, removeGame.
     if (!this.allUsers.length) this.manager.removeGame(this.ID);
-    else return allUsers
+    else return this.allUsers
   };
 
   isOverwatch = socketId =>
@@ -134,7 +134,7 @@ module.exports = class SpyGame {
   };
 
   shuffleCards = () => {
-    if (!lockCards && this.state === "setup") this.gameCards = grabCards();
+    if (!this.lockCards && this.state === "setup") this.gameCards = grabCards();
   };
 
   lockCards = () => {
