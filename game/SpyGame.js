@@ -57,10 +57,9 @@ module.exports = class SpyGame {
     // If the user is an overwatch, remove them first
     this.removeOverwatch(socketId)
     // Remove user from allUsers.
-    this.allUsers.filter(user => user.socketId !== socketId);
+    this.allUsers = this.allUsers.filter(user => user.socketId !== socketId);
     // If allUsers becomes empty, removeGame.
     if (!this.allUsers.length) this.manager.removeGame(this.ID);
-    else return this.allUsers
   };
 
   isOverwatch = socketId =>
