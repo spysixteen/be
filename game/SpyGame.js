@@ -110,7 +110,7 @@ module.exports = class SpyGame {
       this.blueOverwatch = socketId;
       user.overwatch = 1;
     }
-    if (!this.redOverwatch) {
+    else if (!this.redOverwatch) {
       this.redOverwatch = socketId;
       user.overwatch = 2;
     }
@@ -137,11 +137,11 @@ module.exports = class SpyGame {
     if (!this.lockCards && this.state === "setup") this.gameCards = grabCards();
   };
 
-  lockCards = () => {
+  lockGameCards = () => {
     if (this.state === "setup") this.lockCards = true;
   };
 
-  unlockCards = () => {
+  unlockGameCards = () => {
     if (this.state === "setup") this.lockCards = false;
   };
 
@@ -150,7 +150,8 @@ module.exports = class SpyGame {
       this.spyCard = getSpyCard();
   };
 
-  lockSpyCard = socketId => {
+  // To differentiate from the property this.lockSpyCard
+  _lockSpyCard = socketId => {
     if (this.state === "setup" && this.isOverwatch(socketId))
       this.lockSpyCard = true;
   };
@@ -185,7 +186,7 @@ module.exports = class SpyGame {
     if (
       this.state !== "gaming" ||
       this.isOverwatch(socketId) ||
-      this.clickedCard.revealed
+      clickedCard.revealed
     )
       return;
 
@@ -194,7 +195,7 @@ module.exports = class SpyGame {
         ? { ...card, clicked: true }
         : { ...card, clicked: false }
     );
-    this.clickedCard = clickedCard;
+    this.clickedCard = this.gameCards[clickedCard.id]
   };
 
   revealCard = socketId => {
@@ -203,7 +204,7 @@ module.exports = class SpyGame {
     //     or there isn't a clicked card -> return.
     if (
       this.state !== "gaming" ||
-      this.isOverwatch(socketId) ||
+      !this.isOverwatch(socketId) ||
       !this.clickedCard
     )
       return;

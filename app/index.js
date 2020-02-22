@@ -51,7 +51,7 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
       // Get our overwatchID
       const overwatchID = spyGame.becomeOverwatch(socket.id);
@@ -76,12 +76,13 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
       const error = spyGame.removeOverwatch(socket.id);
       if (error) {
         return socket.emit("logagain", "You are not a player in this game!");
       }
+      socket.emit("assignedoverwatch", spyGame.findUser(socket.id));
       sendAllGameInfo(spyGame);
     });
 
@@ -91,7 +92,7 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
       spyGame.shuffleCards();
       sendAllGameInfo(spyGame);
@@ -101,9 +102,9 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
-      spyGame.lockCards();
+      spyGame.lockGameCards();
       sendAllGameInfo(spyGame);
     });
 
@@ -113,19 +114,19 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
       spyGame.shuffleSpyCard(socket.id);
       sendAllGameInfo(spyGame);
     });
 
-    socket.on("confirmspycard", ({roomID}) => {
+    socket.on("confirmspycard", ({ roomID }) => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
-      spyGame.lockSpyCard(socket.id);
+      spyGame._lockSpyCard(socket.id);
       sendAllGameInfo(spyGame);
     });
 
@@ -135,7 +136,7 @@ module.exports = io => {
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
-      if (!spyGame || spyGame.state !== "setup") return;
+      if (!spyGame) return;
 
       // Start the game.
       // If we're missing something, tell the user
@@ -148,7 +149,7 @@ module.exports = io => {
 
     // =======================IN THE GAME======================= //
     socket.on("clickcard", ({ roomID, clickedCard }) => {
-      log(_clickedCard);
+      log(clickedCard);
       // Get our game.
       // If it doesn't exist or is already going, return.
       const [ID, spyGame] = gameManager.findGame(roomID);
@@ -164,7 +165,7 @@ module.exports = io => {
       const [ID, spyGame] = gameManager.findGame(roomID);
       if (!spyGame) return;
 
-      spyGame(socket.id);
+      spyGame.revealCard(socket.id);
       sendAllGameInfo(spyGame);
     });
 
