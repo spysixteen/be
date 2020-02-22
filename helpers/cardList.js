@@ -1,4 +1,4 @@
-const randomUniqueNumber = require("../helpers/randomUniqueNumber")
+const randomUniqueNumber = require("./randomUniqueNumber");
 
 const cardArray = [
   "chick",
@@ -97,7 +97,11 @@ const cardArray = [
 exports.grabCards = () => {
   const usedIndices = [];
   const indexArray = new Array(25).fill(0);
-  return indexArray
-    .map(randomUniqueNumber(90, usedIndices))
-    .map(val => cardArray[val]);
+  return indexArray.map(randomUniqueNumber(90, usedIndices)).map((val, id) => ({
+    id,
+    text: cardArray[val],
+    spy: 0,
+    clicked: false,
+    revealed: false
+  }));
 };
