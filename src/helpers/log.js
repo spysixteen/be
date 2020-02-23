@@ -1,4 +1,4 @@
-module.exports = log = (...args) => {
+module.exports = (...args) => {
     const date = new Date()
     let sec = date.getSeconds()
     sec = sec < 10 ? `0${sec}` : `${sec}`
