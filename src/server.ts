@@ -1,6 +1,6 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
 
 const server = express();
 server.use(helmet());
@@ -11,4 +11,4 @@ server.get("/", (req, res) => {
     res.status(200).json({ Hello: "World!" });
 });
 
-module.exports = server;
+export default server;

@@ -1,7 +1,7 @@
-const socket = require("socket.io");
-const server = require("./server");
-const app = require("./app/index");
-const log = require("./helpers/log");
+import socket from "socket.io";
+import server from "./server";
+import app from "./app/index";
+import log from "./helpers/log";
 
 // PORT we will listen on
 const PORT = process.env.PORT || 2019;
