@@ -1,15 +1,17 @@
-const log = require("../helpers/log");
-const GameManager = require("../game/GameManager");
+import log from "../helpers/log";
+import GameManager, { GameType } from "../game/GameManager";
+import SpyGame from "../game/SpyGame";
+import { Server, Socket } from "socket.io";
 
-module.exports = io => {
-    const gameManager = new GameManager();
+export default (io: Server) => {
+    const gameManager: GameManager = new GameManager();
 
-    return socket => {
+    return (socket: Socket) => {
         log("socket Connection");
         log(socket.id);
 
-        const sendAllGameInfo = spyGame => {
-            spyGame.allUsers.forEach(user => {
+        const sendAllGameInfo = (spyGame: SpyGame) => {
+            spyGame.allUsers.forEach((user: any) => {
                 io.to(`${user.socketId}`).emit(
                     "gameinfo",
                     spyGame.getGameInfo(user.socketId)
@@ -18,43 +20,50 @@ module.exports = io => {
         };
 
         // =====================CREATING ROOM======================== //
-        socket.on("newroom", ({ username }) => {
-            const [ID, spyGame] = gameManager.createGame(username, socket.id);
+        socket.on("newroom", ({ username }: { username: string }) => {
+            const spyGame = gameManager.createGame(
+                username,
+                socket.id,
+                GameType.roomPlay
+            );
             log("Logging in");
             socket.emit("loggedin", {
                 user: spyGame.findUser(socket.id),
-                roomID: ID
+                roomID: spyGame.ID
             });
             sendAllGameInfo(spyGame);
         });
 
         // =====================JOINING ROOM======================== //
-        socket.on("joinroom", ({ username, roomID }) => {
-            const [ID, spyGame] = gameManager.joinGame(
-                username,
-                socket.id,
-                roomID
-            );
-            if (spyGame) {
-                log("Logging in");
-                socket.emit("loggedin", {
-                    user: spyGame.findUser(socket.id),
-                    roomID: ID
-                });
-                sendAllGameInfo(spyGame);
-            } else
-                socket.emit(
-                    "logagain",
-                    "The room you're trying to join doesn't exist!"
+        socket.on(
+            "joinroom",
+            ({ username, roomID }: { username: string; roomID: string }) => {
+                const spyGame = gameManager.joinGame(
+                    username,
+                    socket.id,
+                    roomID
                 );
-        });
+                if (spyGame) {
+                    log("Logging in");
+                    socket.emit("loggedin", {
+                        user: spyGame.findUser(socket.id),
+                        roomID: spyGame.ID
+                    });
+                    sendAllGameInfo(spyGame);
+                } else
+                    socket.emit(
+                        "logagain",
+                        "The room you're trying to join doesn't exist!"
+                    );
+            }
+        );
 
         // =========================OVERWATCH========================== //
 
-        socket.on("selectoverwatch", ({ roomID }) => {
+        socket.on("selectoverwatch", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             // Get our overwatchID
@@ -79,10 +88,10 @@ module.exports = io => {
             sendAllGameInfo(spyGame);
         });
 
-        socket.on("nooverwatch", ({ roomID }) => {
+        socket.on("nooverwatch", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             const error = spyGame.removeOverwatch(socket.id);
@@ -98,20 +107,20 @@ module.exports = io => {
 
         // =========================CARDS========================== //
 
-        socket.on("getcards", ({ roomID }) => {
+        socket.on("getcards", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             spyGame.shuffleCards();
             sendAllGameInfo(spyGame);
         });
 
-        socket.on("confirmcards", ({ roomID }) => {
+        socket.on("confirmcards", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             spyGame.lockGameCards();
@@ -120,20 +129,20 @@ module.exports = io => {
 
         // =========================SPYCARDS========================== //
 
-        socket.on("getspycard", ({ roomID }) => {
+        socket.on("getspycard", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             spyGame.shuffleSpyCard(socket.id);
             sendAllGameInfo(spyGame);
         });
 
-        socket.on("confirmspycard", ({ roomID }) => {
+        socket.on("confirmspycard", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             spyGame._lockSpyCard(socket.id);
@@ -142,10 +151,10 @@ module.exports = io => {
 
         // ===================STARTING GAME============================ //
 
-        socket.on("startgame", ({ roomID }) => {
+        socket.on("startgame", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             // Start the game.
@@ -158,31 +167,31 @@ module.exports = io => {
         });
 
         // =======================IN THE GAME======================= //
-        socket.on("clickcard", ({ roomID, clickedCard }) => {
+        socket.on("clickcard", ({ roomID, clickedCard }: { roomID: string, clickedCard: {} }) => {
             log(clickedCard);
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             spyGame.clickCard(socket.id, clickedCard);
             sendAllGameInfo(spyGame);
         });
 
-        socket.on("revealcard", ({ roomID }) => {
+        socket.on("revealcard", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             spyGame.revealCard(socket.id);
             sendAllGameInfo(spyGame);
         });
 
-        socket.on("resetall", ({ roomID }) => {
+        socket.on("resetall", ({ roomID }: { roomID: string }) => {
             // Get our game.
             // If it doesn't exist or is already going, return.
-            const [ID, spyGame] = gameManager.findGame(roomID);
+            const spyGame = gameManager.findGame(roomID);
             if (!spyGame) return;
 
             spyGame.resetGame();

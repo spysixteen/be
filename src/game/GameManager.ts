@@ -1,7 +1,15 @@
-const RandomNumberGenny = require("../helpers/RandomNumberGenny");
-const SpyGame = require("./SpyGame");
+import RandomNumberGenny from "../helpers/RandomNumberGenny";
+import SpyGame from "./SpyGame";
 
-module.exports = class GameManager {
+export enum GameType {
+    roomPlay = 1,
+    internetPlay = 2
+}
+
+export default class GameManager {
+    RNG: RandomNumberGenny;
+    gameList: { [key: string]: SpyGame };
+
     constructor() {
         this.RNG = new RandomNumberGenny(32);
         this.gameList = {};
@@ -10,17 +18,21 @@ module.exports = class GameManager {
     // This will eventually decide between two game types:
     //     "Over the Internet" or "One room"↓↓
     // Right now, we're assuming one room.  ↓↓
-    createGame = (username, socketId, gameType) => {
-        const ID = this.RNG.generate();
-        const game = new SpyGame(this, ID);
+    createGame = (
+        username: string,
+        socketId: string,
+        gameType: GameType | null
+    ): SpyGame => {
+        const ID: string = this.RNG.generate();
+        const game: SpyGame = new SpyGame(this, ID);
         game.addUser(username, socketId);
         this.gameList[ID] = game;
-        return [ID, this.gameList[ID]];
+        return this.gameList[ID];
     };
 
-    findGame = ID => [ID, this.gameList[ID]];
+    findGame = (ID: string): SpyGame => this.gameList[ID];
 
-    findGameWithSocketId = socketId => {
+    findGameWithSocketId = (socketId: string): SpyGame | undefined => {
         // Iterate over all of our games to see if our socketId
         //     exists in there.
         // THIS CAN BE SLOW, SO USE SPARINGLY.
@@ -29,25 +41,29 @@ module.exports = class GameManager {
         );
     };
 
-    joinGame = (username, socketId, ID) => {
+    joinGame = (
+        username: string,
+        socketId: string,
+        ID: string
+    ): SpyGame | undefined => {
         const game = this.gameList[ID];
         if (game) {
             game.addUser(username, socketId);
         }
-        return [ID, game];
+        return game;
     };
 
-    leaveGame = (socketId, ID) => {
+    leaveGame = (socketId: string, ID: string): number => {
         const game = this.gameList[ID];
         if (game) {
             game.removeUser(socketId);
             return 1;
         }
-        return null;
+        return 0;
     };
 
-    removeGame = ID => {
+    removeGame = (ID: string): void => {
         delete this.gameList[ID];
         this.RNG.remove(ID);
     };
-};
+}

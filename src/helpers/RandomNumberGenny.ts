@@ -1,12 +1,14 @@
-module.exports = class RandomNumberGenny {
-    constructor(base) {
+export default class RandomNumberGenny {
+    uniqueNumbers: { [key: string]: boolean };
+    base: number;
+    constructor(base: number) {
         this.uniqueNumbers = {};
         this.base = base;
     }
 
-    generate = () => {
+    generate = (): string => {
         let looping = true;
-        let rand;
+        let rand = "";
         while (looping) {
             rand = (Math.floor(Math.random() * 900000000) + 100000000).toString(
                 this.base
@@ -19,5 +21,5 @@ module.exports = class RandomNumberGenny {
         return rand;
     };
 
-    remove = id => delete this.uniqueNumbers[id];
-};
+    remove = (id: string) => delete this.uniqueNumbers[id];
+}
