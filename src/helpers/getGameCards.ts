@@ -1,12 +1,14 @@
-const randomUniqueNumber = require("./randomUniqueNumber");
+import RandomNumberGenny from "./RandomNumberGenny";
+import GameCard from "../entities/GameCard";
+import { ESpy } from "../entities/ESpy";
 
-const cardArray = [
+// Make a Set to ensure we have no duplicated values
+const cardSet: Set<string> = new Set([
     "chick",
     "nut",
     "car",
     "chocolate",
     "film",
-    "day",
     "square",
     "net",
     "plastic",
@@ -92,18 +94,25 @@ const cardArray = [
     "christmas",
     "moses",
     "team"
-];
+]);
 
-exports.grabCards = () => {
-    const usedIndices = [];
+// Then, make an Array from the Set,
+//     so we can grab values by index
+const cardArray = Array.from(cardSet);
+
+export const getGameCards = () => {
+    const RNG = new RandomNumberGenny(10, 0, cardArray.length);
     const indexArray = new Array(25).fill(0);
     return indexArray
-        .map(randomUniqueNumber(90, usedIndices))
-        .map((val, id) => ({
-            id,
-            text: cardArray[val],
-            spy: 0,
-            clicked: false,
-            revealed: false
-        }));
+        .map((num: 0) => RNG.generate())
+        .map(
+            (val, id) =>
+                new GameCard(
+                    id,
+                    cardArray[Number(val)],
+                    ESpy.NONE,
+                    false,
+                    false
+                )
+        );
 };
