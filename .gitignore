@@ -105,3 +105,11 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# lockfiles
+package-lock.json
+yarn.lock
+
+# output folders
+build/
+dist/
