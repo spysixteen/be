@@ -7,9 +7,9 @@ import SpyCardTile from "../entities/SpyCardTile";
 import { ESpy } from "../entities/ESpy";
 
 enum EGameState {
-    SETUP = "SETUP",
-    GAMING = "GAMING",
-    FINISH = "FINISH"
+    SETUP = "setup",
+    GAMING = "gaming",
+    FINISH = "finish"
 }
 
 export default class SpyGame {
