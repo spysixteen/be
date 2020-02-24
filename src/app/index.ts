@@ -1,7 +1,8 @@
-import log from "../helpers/log";
-import GameManager, { GameType } from "../game/GameManager";
-import SpyGame from "../game/SpyGame";
 import { Server, Socket } from "socket.io";
+import log from "../helpers/log";
+import GameManager from "../game/GameManager";
+import SpyGame from "../game/SpyGame";
+import GameCard from "../entities/GameCard";
 
 export default (io: Server) => {
     const gameManager: GameManager = new GameManager();
@@ -11,7 +12,7 @@ export default (io: Server) => {
         log(socket.id);
 
         const sendAllGameInfo = (spyGame: SpyGame) => {
-            spyGame.allUsers.forEach((user: any) => {
+            spyGame.AllUsers.forEach((user: any) => {
                 io.to(`${user.socketId}`).emit(
                     "gameinfo",
                     spyGame.getGameInfo(user.socketId)
@@ -21,15 +22,11 @@ export default (io: Server) => {
 
         // =====================CREATING ROOM======================== //
         socket.on("newroom", ({ username }: { username: string }) => {
-            const spyGame = gameManager.createGame(
-                username,
-                socket.id,
-                GameType.roomPlay
-            );
+            const spyGame = gameManager.createGame(username, socket.id);
             log("Logging in");
             socket.emit("loggedin", {
                 user: spyGame.findUser(socket.id),
-                roomID: spyGame.ID
+                roomID: spyGame.getID
             });
             sendAllGameInfo(spyGame);
         });
@@ -47,7 +44,7 @@ export default (io: Server) => {
                     log("Logging in");
                     socket.emit("loggedin", {
                         user: spyGame.findUser(socket.id),
-                        roomID: spyGame.ID
+                        roomID: spyGame.getID
                     });
                     sendAllGameInfo(spyGame);
                 } else
@@ -76,14 +73,12 @@ export default (io: Server) => {
             }
             if (overwatchID === 0) {
                 log("overwatch already assigned");
-                log(spyGame.blueOverwatch, spyGame.redOverwatch);
                 return socket.emit(
                     "overwatchassigned",
                     `Overwatch is already assigned`
                 );
             }
             log("We overwatchin' now");
-            log(spyGame.blueOverwatch, spyGame.redOverwatch);
             socket.emit("assignedoverwatch", spyGame.findUser(socket.id));
             sendAllGameInfo(spyGame);
         });
@@ -95,7 +90,7 @@ export default (io: Server) => {
             if (!spyGame) return;
 
             const error = spyGame.removeOverwatch(socket.id);
-            if (error) {
+            if (error === -1) {
                 return socket.emit(
                     "logagain",
                     "You are not a player in this game!"
@@ -167,16 +162,19 @@ export default (io: Server) => {
         });
 
         // =======================IN THE GAME======================= //
-        socket.on("clickcard", ({ roomID, clickedCard }: { roomID: string, clickedCard: {} }) => {
-            log(clickedCard);
-            // Get our game.
-            // If it doesn't exist or is already going, return.
-            const spyGame = gameManager.findGame(roomID);
-            if (!spyGame) return;
+        socket.on(
+            "clickcard",
+            ({ roomID, clickedCard }: { roomID: string; clickedCard: GameCard }) => {
+                log(clickedCard);
+                // Get our game.
+                // If it doesn't exist or is already going, return.
+                const spyGame = gameManager.findGame(roomID);
+                if (!spyGame) return;
 
-            spyGame.clickCard(socket.id, clickedCard);
-            sendAllGameInfo(spyGame);
-        });
+                spyGame.clickCard(socket.id, clickedCard);
+                sendAllGameInfo(spyGame);
+            }
+        );
 
         socket.on("revealcard", ({ roomID }: { roomID: string }) => {
             // Get our game.

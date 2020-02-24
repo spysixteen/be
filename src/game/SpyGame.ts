@@ -1,39 +1,59 @@
-const { grabCards } = require("../helpers/cardList");
-const { getSpyCard } = require("../helpers/getSpyCard");
+import GameManager from "./GameManager";
+import User, { ETeam } from "../entities/User";
+import { getGameCards } from "../helpers/getGameCards";
+import { getSpyCardTiles } from "../helpers/getSpyCardTiles";
+import GameCard from "../entities/GameCard";
+import SpyCardTile from "../entities/SpyCardTile";
+import { ESpy } from "../entities/ESpy";
 
-module.exports = class SpyGame {
-    constructor(manager, ID) {
+enum EGameState {
+    SETUP = "SETUP",
+    GAMING = "GAMING",
+    FINISH = "FINISH"
+}
+
+export default class SpyGame {
+    private manager: GameManager;
+
+    private ID: string;
+
+    private state: EGameState;
+
+    private endGameVictor: ETeam;
+
+    private gameBoard: GameCard[];
+
+    private lockCards: boolean;
+
+    private spyCard: SpyCardTile[];
+
+    private lockSpyCard: boolean;
+
+    private clickedCard: GameCard | null;
+
+    private allUsers: User[];
+
+    public constructor(manager: GameManager, ID: string) {
         this.manager = manager;
         this.ID = ID;
 
-        this.state = "setup";
-        this.endGameVictor = 0;
+        this.state = EGameState.SETUP;
+        this.endGameVictor = ETeam.NONE;
 
-        this.gameCards = grabCards(); // Array of 25 cards
+        this.gameBoard = getGameCards(); // Array of 25 cards
         this.lockCards = false;
 
-        this.spyCard = getSpyCard(); // Array of values, 0/1/2/3
+        this.spyCard = getSpyCardTiles(); // Array of values, 0/1/2/3
         this.lockSpyCard = false;
 
         this.clickedCard = null;
 
         this.allUsers = [];
-        this.blueOverwatch = null; // socketId of overwatch
-        this.redOverwatch = null; // users from allUsers array
     }
     /*
   =========================================================
   Object Structure:
 
-  blue = 1, red = 2, assassin = 3
-  this.state = "setup" | "gaming" | "finish"
-  endGameVictor = 0 | 1 | 2
-
-  user: {
-    username:  string;
-    socketId:  string;
-    overwatch: 0|1|2 ←←← REMOVE THIS?
-  }
   card: {
     id:       number;
     text:     string;
@@ -45,16 +65,27 @@ module.exports = class SpyGame {
   =========================================================
   */
 
-    findUser = socketId =>
+    public get AllUsers(): User[] {
+        return this.allUsers;
+    }
+
+    public get getID(): string {
+        return this.ID;
+    }
+
+    findUser = (socketId: string): User | undefined =>
         this.allUsers.find(user => user.socketId === socketId);
 
-    addUser = (username, socketId) => {
+    findOverWatch = (team: ETeam): User | undefined =>
+        this.allUsers.find(user => user.team === team && user.overwatch);
+
+    addUser = (username: string, socketId: string) => {
         // If it doesn't already exist in our array, add it in!
         if (!this.allUsers.find(user => user.socketId === socketId))
-            this.allUsers.push({ username, socketId, overwatch: 0 });
+            this.allUsers.push(new User(username, socketId));
     };
 
-    removeUser = socketId => {
+    removeUser = (socketId: string) => {
         // If the user is an overwatch, remove them first
         this.removeOverwatch(socketId);
         // Remove user from allUsers.
@@ -65,20 +96,18 @@ module.exports = class SpyGame {
         if (!this.allUsers.length) this.manager.removeGame(this.ID);
     };
 
-    isOverwatch = socketId =>
-        this.blueOverwatch === socketId || this.redOverwatch === socketId;
+    isOverwatch = (socketId: string) => {
+        const checkUser = this.findUser(socketId);
+        return checkUser ? checkUser.overwatch : false;
+    };
 
     getTotalOverwatch = () =>
-        this.blueOverwatch && this.redOverwatch
-            ? 2
-            : this.blueOverwatch || this.redOverwatch
-            ? 1
-            : 0;
+        this.allUsers.filter(user => user.overwatch).length;
 
-    getGameInfo = socketId => ({
+    getGameInfo = (socketId: string) => ({
         state: this.state,
         endGameVictor: this.endGameVictor,
-        gameCards: this.gameCards,
+        gameBoard: this.gameBoard,
         isOverwatch: this.isOverwatch(socketId),
         spyCard: this.isOverwatch(socketId) ? this.spyCard : [],
         clickedCard: this.clickedCard,
@@ -96,82 +125,79 @@ module.exports = class SpyGame {
   ===========================================
   */
 
-    becomeOverwatch = socketId => {
-        if (this.state !== "setup") return;
+    becomeOverwatch = (socketId: string): ETeam | 0 | -1 => {
+        if (this.state !== EGameState.SETUP) return 0;
         const user = this.findUser(socketId);
 
         // No user? Return -1
         if (!user) return -1;
-
-        // Already set up as an overwatch? return
-        if (user.overwatch) return user.overwatch;
+        // Already set up as an overwatch? return their ETeam
+        if (user.overwatch) return user.team;
 
         // Find an open spot if there is one,
         //     and assign it.
-        if (!this.blueOverwatch) {
-            this.blueOverwatch = socketId;
-            user.overwatch = 1;
-        } else if (!this.redOverwatch) {
-            this.redOverwatch = socketId;
-            user.overwatch = 2;
+        if (!this.findOverWatch(ETeam.BLUE)) {
+            user.team = ETeam.BLUE;
+            user.overwatch = true;
+            return user.team;
         }
-
-        // If we were assigned, this number will no longer be a zero.
-        //     If overwatch is already taken, user.overwatch is zero.
-        return user.overwatch;
-    };
-
-    removeOverwatch = socketId => {
-        if (this.state !== "setup") return;
-        const user = this.findUser(socketId);
-
-        // No user? Return 1 for "Yes, we have an error"
-        if (!user) return 1;
-
-        user.overwatch = 0;
-        if (this.blueOverwatch === socketId) this.blueOverwatch = null;
-        if (this.redOverwatch === socketId) this.redOverwatch = null;
+        if (!this.findOverWatch(ETeam.RED)) {
+            user.team = ETeam.RED;
+            user.overwatch = true;
+            return user.team;
+        }
+        // No assignable overwatch? Return 0 '' '
         return 0;
     };
 
+    removeOverwatch = (socketId: string): void | -1 => {
+        if (this.state !== EGameState.SETUP) return;
+        const user = this.findUser(socketId);
+
+        // No user? Return 1 for "Yes, we have an error"
+        if (!user) return -1;
+
+        user.overwatch = false;
+    };
+
     shuffleCards = () => {
-        if (!this.lockCards && this.state === "setup")
-            this.gameCards = grabCards();
+        if (!this.lockCards && this.state === EGameState.SETUP)
+            this.gameBoard = getGameCards();
     };
 
     lockGameCards = () => {
-        if (this.state === "setup") this.lockCards = true;
+        if (this.state === EGameState.SETUP) this.lockCards = true;
     };
 
     unlockGameCards = () => {
-        if (this.state === "setup") this.lockCards = false;
+        if (this.state === EGameState.SETUP) this.lockCards = false;
     };
 
-    shuffleSpyCard = socketId => {
-        if (this.state === "setup" && this.isOverwatch(socketId))
-            this.spyCard = getSpyCard();
+    shuffleSpyCard = (socketId: string) => {
+        if (this.state === EGameState.SETUP && this.isOverwatch(socketId))
+            this.spyCard = getSpyCardTiles();
     };
 
     // To differentiate from the property this.lockSpyCard
-    _lockSpyCard = socketId => {
-        if (this.state === "setup" && this.isOverwatch(socketId))
+    _lockSpyCard = (socketId: string) => {
+        if (this.state === EGameState.SETUP && this.isOverwatch(socketId))
             this.lockSpyCard = true;
     };
 
-    unlockSpyCard = socketId => {
-        if (this.state === "setup" && this.isOverwatch(socketId))
+    unlockSpyCard = (socketId: string) => {
+        if (this.state === EGameState.SETUP && this.isOverwatch(socketId))
             this.lockSpyCard = false;
     };
 
     startGame = () => {
         const missing = [];
-        if (!this.lockCards) missing.push("gameCards");
+        if (!this.lockCards) missing.push("gameBoard");
         if (!this.lockSpyCard) missing.push("spyCard");
-        if (!this.redOverwatch && !this.blueOverwatch)
+        if (!this.findOverWatch(ETeam.BLUE) && !this.findOverWatch(ETeam.RED))
             missing.push("overwatch");
 
         if (missing.length) return missing;
-        this.state = "gaming";
+        this.state = EGameState.GAMING;
     };
 
     /* 
@@ -182,38 +208,38 @@ module.exports = class SpyGame {
   ===========================================
   */
 
-    clickCard = (socketId, clickedCard) => {
+    clickCard = (socketId: string, clickedCard: GameCard) => {
         // If we're not gaming,
         //     we ARE overwatch,
         //     or the card is already revealed -> return.
         if (
-            this.state !== "gaming" ||
+            this.state !== EGameState.GAMING ||
             this.isOverwatch(socketId) ||
             clickedCard.revealed
         )
             return;
 
-        this.gameCards = this.gameCards.map(card =>
-            card.id === clickedCard.id
+        this.gameBoard = this.gameBoard.map(card =>
+            card.ID === clickedCard.ID
                 ? { ...card, clicked: true }
                 : { ...card, clicked: false }
         );
-        this.clickedCard = this.gameCards[clickedCard.id];
+        this.clickedCard = this.gameBoard[clickedCard.ID];
     };
 
-    revealCard = socketId => {
+    revealCard = (socketId: string) => {
         // If we're not gaming,
         //     we AREN'T overwatch,
         //     or there isn't a clicked card -> return.
         if (
-            this.state !== "gaming" ||
+            this.state !== EGameState.GAMING ||
             !this.isOverwatch(socketId) ||
             !this.clickedCard
         )
             return;
 
-        const card = this.gameCards[this.clickedCard.id];
-        card.spy = this.spyCard[this.clickedCard.id].tile;
+        const card = this.gameBoard[this.clickedCard.ID];
+        card.spy = this.spyCard[this.clickedCard.ID].spy;
         card.clicked = false;
         card.revealed = true;
 
@@ -222,15 +248,15 @@ module.exports = class SpyGame {
         if (winState) this.endGame(winState);
     };
 
-    // Reduce our gameCards array to a single value
+    // Reduce our gameBoard array to a single value
     // If the card is revealed and isn't a civilian,
     //     it has a spy value.
     // If we only check the .spy property, we can see
     //     all of the cards that are revealed,
     //     and are the red/blue/assassin type that
     //     we pass in.
-    revealedTotal = type =>
-        this.gameCards.reduce(
+    revealedTotal = (type: ESpy) =>
+        this.gameBoard.reduce(
             (prev, curr) => (curr.spy === type ? ++prev : prev),
             0
         );
@@ -242,8 +268,8 @@ module.exports = class SpyGame {
         return 0;
     };
 
-    endGame = winState => {
-        this.state = "finish";
+    endGame = (winState: ETeam) => {
+        this.state = EGameState.FINISH;
         this.endGameVictor = winState;
     };
 
@@ -256,21 +282,23 @@ module.exports = class SpyGame {
   */
 
     resetGame = () => {
-        if (this.state !== "finish") return;
+        if (this.state !== EGameState.FINISH) return;
 
         // Reset all of our values ↓↓
-        this.state = "setup";
+        this.state = EGameState.SETUP;
         this.endGameVictor = 0;
 
-        this.gameCards = grabCards(); // Array of 25 cards
+        this.gameBoard = getGameCards(); // Array of 25 cards
         this.lockCards = false;
 
-        this.spyCard = getSpyCard(); // Array of values, 0/1/2/3
+        this.spyCard = getSpyCardTiles(); // Array of values, 0/1/2/3
         this.lockSpyCard = false;
 
         this.clickedCard = null;
 
-        this.blueOverwatch = null; // socketId of overwatch
-        this.redOverwatch = null; // users from allUsers array
+        this.allUsers.map(user => {
+            user.overwatch = false;
+            return user;
+        });
     };
-};
+}

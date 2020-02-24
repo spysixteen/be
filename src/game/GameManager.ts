@@ -1,17 +1,18 @@
 import RandomNumberGenny from "../helpers/RandomNumberGenny";
 import SpyGame from "./SpyGame";
 
-export enum GameType {
+export enum EGameType {
     roomPlay = 1,
     internetPlay = 2
 }
 
 export default class GameManager {
     RNG: RandomNumberGenny;
+
     gameList: { [key: string]: SpyGame };
 
     constructor() {
-        this.RNG = new RandomNumberGenny(32);
+        this.RNG = new RandomNumberGenny(32, 100000000, 900000000);
         this.gameList = {};
     }
 
@@ -21,7 +22,7 @@ export default class GameManager {
     createGame = (
         username: string,
         socketId: string,
-        gameType: GameType | null
+        gameType?: EGameType
     ): SpyGame => {
         const ID: string = this.RNG.generate();
         const game: SpyGame = new SpyGame(this, ID);
