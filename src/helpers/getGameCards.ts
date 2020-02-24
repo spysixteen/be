@@ -1,6 +1,6 @@
 import RandomNumberGenny from "./RandomNumberGenny";
 import GameCard from "../entities/GameCard";
-import { ESpy } from "../entities/ESpy";
+import ESpy from "../entities/ESpy";
 
 // Make a Set to ensure we have no duplicated values
 const cardSet: Set<string> = new Set([
@@ -100,19 +100,13 @@ const cardSet: Set<string> = new Set([
 //     so we can grab values by index
 const cardArray = Array.from(cardSet);
 
-export const getGameCards = () => {
+export default (): GameCard[] => {
     const RNG = new RandomNumberGenny(10, 0, cardArray.length);
     const indexArray = new Array(25).fill(0);
     return indexArray
-        .map((num: 0) => RNG.generate())
+        .map(() => Number(RNG.generate()))
         .map(
             (val, id) =>
-                new GameCard(
-                    id,
-                    cardArray[Number(val)],
-                    ESpy.NONE,
-                    false,
-                    false
-                )
+                new GameCard(id, cardArray[val], ESpy.NONE, false, false)
         );
 };

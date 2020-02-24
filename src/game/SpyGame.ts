@@ -1,15 +1,28 @@
 import GameManager from "./GameManager";
 import User, { ETeam } from "../entities/User";
-import { getGameCards } from "../helpers/getGameCards";
-import { getSpyCardTiles } from "../helpers/getSpyCardTiles";
+import getGameCards from "../helpers/getGameCards";
+import getSpyCardTiles from "../helpers/getSpyCardTiles";
 import GameCard from "../entities/GameCard";
 import SpyCardTile from "../entities/SpyCardTile";
-import { ESpy } from "../entities/ESpy";
+import ESpy from "../entities/ESpy";
 
 enum EGameState {
     SETUP = "setup",
     GAMING = "gaming",
     FINISH = "finish"
+}
+
+interface IGameInfo {
+    state: EGameState;
+    endGameVictor: ETeam;
+    gameBoard: GameCard[];
+    isOverwatch: boolean;
+    spyCard: SpyCardTile[];
+    clickedCard: GameCard | null;
+    allUsers: User[];
+    lockCards: boolean;
+    lockSpyCard: boolean;
+    totalOverwatch: number;
 }
 
 export default class SpyGame {
@@ -79,13 +92,13 @@ export default class SpyGame {
     findOverWatch = (team: ETeam): User | undefined =>
         this.allUsers.find(user => user.team === team && user.overwatch);
 
-    addUser = (username: string, socketId: string) => {
+    addUser = (username: string, socketId: string): void => {
         // If it doesn't already exist in our array, add it in!
         if (!this.allUsers.find(user => user.socketId === socketId))
             this.allUsers.push(new User(username, socketId));
     };
 
-    removeUser = (socketId: string) => {
+    removeUser = (socketId: string): void => {
         // If the user is an overwatch, remove them first
         this.removeOverwatch(socketId);
         // Remove user from allUsers.
@@ -96,15 +109,15 @@ export default class SpyGame {
         if (!this.allUsers.length) this.manager.removeGame(this.ID);
     };
 
-    isOverwatch = (socketId: string) => {
+    isOverwatch = (socketId: string): boolean => {
         const checkUser = this.findUser(socketId);
         return checkUser ? checkUser.overwatch : false;
     };
 
-    getTotalOverwatch = () =>
+    getTotalOverwatch = (): number =>
         this.allUsers.filter(user => user.overwatch).length;
 
-    getGameInfo = (socketId: string) => ({
+    getGameInfo = (socketId: string): IGameInfo => ({
         state: this.state,
         endGameVictor: this.endGameVictor,
         gameBoard: this.gameBoard,
@@ -150,7 +163,7 @@ export default class SpyGame {
         return 0;
     };
 
-    removeOverwatch = (socketId: string): void | -1 => {
+    removeOverwatch = (socketId: string): -1 | undefined => {
         if (this.state !== EGameState.SETUP) return;
         const user = this.findUser(socketId);
 
@@ -160,36 +173,36 @@ export default class SpyGame {
         user.overwatch = false;
     };
 
-    shuffleCards = () => {
+    shuffleCards = (): void => {
         if (!this.lockCards && this.state === EGameState.SETUP)
             this.gameBoard = getGameCards();
     };
 
-    lockGameCards = () => {
+    lockGameCards = (): void => {
         if (this.state === EGameState.SETUP) this.lockCards = true;
     };
 
-    unlockGameCards = () => {
+    unlockGameCards = (): void => {
         if (this.state === EGameState.SETUP) this.lockCards = false;
     };
 
-    shuffleSpyCard = (socketId: string) => {
+    shuffleSpyCard = (socketId: string): void => {
         if (this.state === EGameState.SETUP && this.isOverwatch(socketId))
             this.spyCard = getSpyCardTiles();
     };
 
     // To differentiate from the property this.lockSpyCard
-    _lockSpyCard = (socketId: string) => {
+    golockSpyCard = (socketId: string): void => {
         if (this.state === EGameState.SETUP && this.isOverwatch(socketId))
             this.lockSpyCard = true;
     };
 
-    unlockSpyCard = (socketId: string) => {
+    unlockSpyCard = (socketId: string): void => {
         if (this.state === EGameState.SETUP && this.isOverwatch(socketId))
             this.lockSpyCard = false;
     };
 
-    startGame = () => {
+    startGame = (): string[] | undefined => {
         const missing = [];
         if (!this.lockCards) missing.push("gameBoard");
         if (!this.lockSpyCard) missing.push("spyCard");
@@ -208,7 +221,7 @@ export default class SpyGame {
   ===========================================
   */
 
-    clickCard = (socketId: string, clickedCard: GameCard) => {
+    clickCard = (socketId: string, clickedCard: GameCard): void => {
         // If we're not gaming,
         //     we ARE overwatch,
         //     or the card is already revealed -> return.
@@ -227,7 +240,7 @@ export default class SpyGame {
         this.clickedCard = this.gameBoard[clickedCard.ID];
     };
 
-    revealCard = (socketId: string) => {
+    revealCard = (socketId: string): void => {
         // If we're not gaming,
         //     we AREN'T overwatch,
         //     or there isn't a clicked card -> return.
@@ -255,20 +268,20 @@ export default class SpyGame {
     //     all of the cards that are revealed,
     //     and are the red/blue/assassin type that
     //     we pass in.
-    revealedTotal = (type: ESpy) =>
+    revealedTotal = (type: ESpy): number =>
         this.gameBoard.reduce(
-            (prev, curr) => (curr.spy === type ? ++prev : prev),
+            (prev, curr) => (curr.spy === type ? prev + 1 : prev),
             0
         );
 
-    checkWin = () => {
+    checkWin = (): 0 | 1 | 2 | 3 => {
         if (this.revealedTotal(1) === 8) return 1;
         if (this.revealedTotal(2) === 9) return 2;
         if (this.revealedTotal(3)) return 3;
         return 0;
     };
 
-    endGame = (winState: ETeam) => {
+    endGame = (winState: ETeam): void => {
         this.state = EGameState.FINISH;
         this.endGameVictor = winState;
     };
@@ -281,7 +294,7 @@ export default class SpyGame {
   ===========================================
   */
 
-    resetGame = () => {
+    resetGame = (): void => {
         if (this.state !== EGameState.FINISH) return;
 
         // Reset all of our values ↓↓
@@ -297,7 +310,14 @@ export default class SpyGame {
         this.clickedCard = null;
 
         this.allUsers.map(user => {
-            user.overwatch = false;
+            if (user.overwatch) {
+                return new User(
+                    user.username,
+                    user.socketId,
+                    user.overwatch,
+                    user.team
+                );
+            }
             return user;
         });
     };

@@ -1,4 +1,4 @@
-import { ESpy } from "./ESpy";
+import ESpy from "./ESpy";
 
 export default class SpyCardTile {
     readonly ID: number;

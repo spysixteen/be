@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 2019;
 
 // Create serverInstance so we can connect via webSocket
 const serverInstance = server.listen(PORT, () =>
+    /* eslint-disable */
     console.log(`\n=== Listening on post ${PORT} ===\n`)
 );
 

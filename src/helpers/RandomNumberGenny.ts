@@ -30,5 +30,5 @@ export default class RandomNumberGenny {
         return rand;
     };
 
-    remove = (id: string) => delete this.uniqueNumbers[id];
+    remove = (id: string): boolean => delete this.uniqueNumbers[id];
 }

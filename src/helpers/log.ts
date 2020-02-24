@@ -1,5 +1,5 @@
-const log = (...args: any[]) => {
-    const padZero = (val: number, length: number) =>
+const log = (...args: any[]): void => {
+    const padZero = (val: number, length: number): string =>
         String(val).padStart(length, "0");
 
     const date = new Date();
@@ -14,6 +14,7 @@ const log = (...args: any[]) => {
         2
     )} ${padZero(hour, 2)}:${padZero(min, 2)}:${padZero(sec, 2)}]`;
 
+    /* eslint-disable */
     console.log(dateString, args);
 };
 export default log;

@@ -7,9 +7,9 @@ export enum EGameType {
 }
 
 export default class GameManager {
-    RNG: RandomNumberGenny;
+    private RNG: RandomNumberGenny;
 
-    gameList: { [key: string]: SpyGame };
+    private gameList: { [key: string]: SpyGame };
 
     constructor() {
         this.RNG = new RandomNumberGenny(32, 100000000, 900000000);
