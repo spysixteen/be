@@ -13,6 +13,6 @@ const serverInstance = server.listen(PORT, () =>
 );
 
 // Connect via webSocket
-const io = socket(serverInstance);
+const io = socket(serverInstance, {origins: "*:*"});
 io.on("connection", app(io));
 log("io socket ready");
