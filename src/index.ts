@@ -5,7 +5,8 @@ import log from "./helpers/log";
 
 // PORT we will listen on
 const PORT = process.env.PORT || 2019;
-
+console.log(PORT)
+console.log("here")
 // Create serverInstance so we can connect via webSocket
 const serverInstance = server.listen(PORT, () =>
     /* eslint-disable */
